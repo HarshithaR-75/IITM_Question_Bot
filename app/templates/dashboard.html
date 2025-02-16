@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+
+        .test-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-box h3 {
+            margin: 0;
+            font-size: 1.2em;
+            color: #007bff;
+        }
+
+        .test-box p {
+            margin: 10px 0;
+            color: #555;
+        }
+
+        .test-box button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .test-box button:hover {
+            background-color: #0056b3;
+        }
+
+        .back-home {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .back-home button {
+            background-color: #f0ad4e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .back-home button:hover {
+            background-color: #e59529;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <h1>Test Dashboard</h1>
+    {% if tests %}
+        <div class="test-grid">
+            {% for test in tests %}
+                <div class="test-box">
+                    <h3>Test ID: {{ test.id }}</h3>
+                    <p><strong>Score:</strong> {{ test.score }} / {{ test.total_questions }}</p>
+                    <p><strong>Date:</strong> {{ test.date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <button onclick="window.location.href='/test_details/{{ test.id }}'">View Analysis</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No tests found. Take a test to see your results here!</p>
+    {% endif %}
+
+    <div class="back-home">
+        <button onclick="window.location.href='/'">Back to Home</button>
+    </div>
+</div>
+</body>
+</html>

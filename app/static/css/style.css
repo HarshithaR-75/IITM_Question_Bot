@@ -1,0 +1,129 @@
+body {
+    font-family: Arial, sans-serif;
+    height: auto; /* Allow the body height to adjust with content */
+    margin: 0;
+    padding: 20px; /* Add some padding for nicer spacing */
+    background-color: #f0f0f0;
+    overflow: auto; /* Ensure body is scrollable */
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto; /* Center the container */
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    background-color: rgba(200, 200, 200, 0.641);
+    padding: 10px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+select, input[type="number"], button {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    margin-top: 5px;
+}
+
+button {
+    margin-top: 20px;
+    background-color: rgb(240, 231, 166);
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: rgb(220, 211, 140);
+}
+
+.questions-slider {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.question-block {
+    display: block; /* Ensure question blocks are visible */
+    position: relative;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.options-container {
+    margin-top: 10px;
+}
+
+.navigation-arrows {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.navigation-arrows button {
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgb(240, 231, 166);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.navigation-arrows button:hover {
+    background-color: rgb(220, 211, 140);
+}
+
+/* Set a default height to ensure the container is visible */
+#question-section {
+    display: none; /* Keep hidden initially */
+    margin-top: 20px;
+}
+
+#questions-container {
+    min-height: 150px; /* Adjusted height to ensure there is enough room for questions */
+    padding: 10px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    transition: height 0.3s ease-in-out;
+    overflow: auto; /* Helps with visibility if there are too many questions */
+}
+
+.option {
+    margin-bottom: 5px;
+}
+
+.option label {
+    font-weight: normal; /* Ensure option labels are not bold */
+}
+

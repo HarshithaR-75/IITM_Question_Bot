@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        .test-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-info p {
+            margin: 5px 0;
+        }
+
+        h3 {
+            margin-top: 30px;
+            color: #444;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background: #f9f9f9;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        li strong {
+            color: #333;
+        }
+
+        .back-button {
+            display: block;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        .back-button button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .back-button button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Test Analysis</h1>
+    <div class="test-info">
+        <p><strong>Test ID:</strong> {{ test.id }}</p>
+        <p><strong>Score:</strong> {{ test.score }} / {{ test.total_questions }}</p>
+        <p><strong>Date:</strong> {{ test.date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+
+    <h3>Question-wise Analysis</h3>
+    <ul>
+        {% for result in test.results %}
+        <li>
+            <p><strong>Question:</strong> {{ result['question'] }}</p>
+            <p><strong>Your Answer:</strong> {{ result['user_answer'] or 'Not Answered' }}</p>
+            <p><strong>Correct Answer:</strong> {{ result['correct_answer'] }}</p>
+
+                <p><strong>Status:</strong>
+                    {% if result['is_correct'] %}
+                        <span style="color: green;">Correct</span>
+                    {% else %}
+                        <span style="color: red;">Incorrect</span>
+                    {% endif %}
+                </p>
+                           
+            </p>
+            <p><strong>Solution:</strong> {{ result['solution'] }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="back-button">
+        <button onclick="window.location.href='/dashboard'">Back to Dashboard</button>
+    </div>
+</div>
+</body>
+</html>
