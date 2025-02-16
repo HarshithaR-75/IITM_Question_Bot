@@ -2,11 +2,13 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 # Initialize Flask app
-app = Flask(__name__)
 
-# Database setup
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:root%40123@localhost/bot"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
+
 
 # Move import after app and db initialization
 from app.routes import routes
