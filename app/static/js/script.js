@@ -7,11 +7,11 @@ document.getElementById('subject').addEventListener('change', function () {
     let topics = [];
 
     if (selectedSubject === 'Mathematics') {
-        topics = ['Circles', 'Linear Equations', 'Probability'];
+        topics = ['Circles', 'Linear Equations', 'Probability','Sets'];
     } else if (selectedSubject === 'Physics') {
-        topics = ['Optics', 'Thermodynamics', 'Electromagnetism'];
+        topics = ['Optics', 'Thermodynamics', 'Electromagnetism','Radioactivity'];
     } else if (selectedSubject === 'Chemistry') {
-        topics = ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry'];
+        topics = ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry', 'Atomic Structure'];
     }
 
     topics.forEach(topic => {
@@ -34,13 +34,14 @@ function getQuestion() {
         return;
     }
 
-    fetch('/get_question', {
+    fetch('/generate_question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, topic, level, numQuestions })
     })
     .then(response => response.json())
     .then(data => {
+        console.log("Received data:", data); // Debugging step
         const questionsContainer = document.getElementById('questions-container');
         questionsContainer.innerHTML = ''; // Clear previous questions
         document.getElementById('question-section').style.display = 'block';
