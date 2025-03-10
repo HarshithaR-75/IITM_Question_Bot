@@ -66,7 +66,7 @@ def generate_question():
         ],
         model="gpt-4o-mini",
         temperature=1,
-        max_tokens=500,
+        max_tokens=2500,
         top_p=1
     )
 
