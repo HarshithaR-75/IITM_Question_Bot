@@ -99,6 +99,7 @@ def generate_question():
                 solution=detailed_solution
             )
             db.session.add(new_question)
+            db.session.commit()
             new_questions.append({
                 "id": new_question.id,
                 "question": new_question.question_text,
