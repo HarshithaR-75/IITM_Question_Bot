@@ -32,27 +32,31 @@ def generate_question():
     level = data.get('level')
     num_questions = int(data.get('numQuestions', 1))
 
-    print(f"Filtering Questions for Subject: {subject}, Topic: {topic}, Level: {level}")
+    print(f"Filtering Questions for Subject: {subject}, Topic: {topic}, Level: {level}, Number of questions: {num_questions}")
 
     # Fetch questions from the database
     questions = Question.query.filter_by(subject=subject, topic=topic, level=level).limit(num_questions).all()
-    
-    if questions:
-        question_list = [
-            {
-                "id": q.id,
-                "question": q.question_text,
-                "options": list(q.options.values()) if isinstance(q.options, dict) else list(json.loads(q.options).values()),
-                "correct_answer": q.answer,
-                "detailed_solution": q.solution
-            }
-            for q in questions
-        ]
+    existing_questions = len(questions)
+
+    question_list = [
+        {
+            "id": q.id,
+            "question": q.question_text,
+            "options": list(q.options.values()) if isinstance(q.options, dict) else list(json.loads(q.options).values()),
+            "correct_answer": q.answer,
+            "detailed_solution": q.solution
+        }
+        for q in questions
+    ]
+
+    if existing_questions >= num_questions:
         return jsonify(question_list), 200
 
-    print("No questions found, generating using OpenAI...")
+    remaining_questions = num_questions - existing_questions
+    print(f"Generating {remaining_questions} more questions using OpenAI...")
+
     prompt = (
-        f"Generate {num_questions} {level}-level questions on {topic} in {subject} "
+        f"Generate {remaining_questions} {level}-level questions on {topic} in {subject} "
         f"with 4 options (A, B, C, D), an answer, and a detailed solution. "
         f"The response should be in JSON format as follows: \n"
         f"[{{\"question\": \"<question_text>\", \"options\": {{\"A\": \"<option_A>\", \"B\": \"<option_B>\", \"C\": \"<option_C>\", \"D\": \"<option_D>\"}}, "
@@ -66,7 +70,7 @@ def generate_question():
         ],
         model="gpt-4o-mini",
         temperature=1,
-        max_tokens=2500,
+        max_tokens=1000,
         top_p=1
     )
 
@@ -74,11 +78,9 @@ def generate_question():
     print("Generated Text:", generated_text)
 
     try:
-        # Clean and parse the generated text
         generated_text = re.sub(r'```json|```', '', generated_text).strip()
         ai_response = json.loads(generated_text)
 
-        # Ensure AI response is a **list**, not a single dictionary
         if not isinstance(ai_response, list):
             ai_response = [ai_response]
 
@@ -108,7 +110,7 @@ def generate_question():
             })
 
         db.session.commit()
-        return jsonify(new_questions), 200
+        return jsonify(question_list + new_questions), 200
 
     except json.JSONDecodeError as e:
         print("JSON parsing error:", e)
@@ -119,6 +121,7 @@ def generate_question():
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
+
 
 
 @routes.route('/submit_test', methods=['POST'])
