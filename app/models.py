@@ -1,11 +1,12 @@
 from sqlalchemy import JSON
 from app import db
 from sqlalchemy.dialects.postgresql import JSONB
+from flask_login import UserMixin
+from app import login_manager
 
 
 class Question(db.Model):
-    __tablename__ = 'questions'  # You can choose an appropriate name here
-
+    __tablename__ = 'questions' 
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String, nullable=False)
     topic = db.Column(db.String, nullable=False)
@@ -35,3 +36,24 @@ class TestResult(db.Model):
     total_questions = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, default=db.func.current_timestamp())
     results = db.Column(JSON, nullable=False)  # Store detailed results as JSON
+
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True)
+
+class UserRoles(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id', ondelete='CASCADE'))
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(255))
+    role = db.Column(db.String(50), nullable=False)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+

@@ -1,17 +1,94 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, current_app, render_template, request, jsonify
+from flask import g
+from flask_security import roles_required
+from flask_principal import Identity, identity_changed,  AnonymousIdentity, identity_loaded, RoleNeed, UserNeed
+from flask import render_template, redirect, url_for, request, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import db, Question, TestResult
+from app.forms import RegistrationForm, LoginForm
+
 import os
 import openai
 import json
 import re
 
-routes = Blueprint('routes', __name__)
+routes = Blueprint('routes', __name__, template_folder='templates')
+
 
 @routes.route('/')
-def index():
+def home():
+    return redirect(url_for('routes.login'))
+
+@routes.route('/register', methods=['GET', 'POST'])
+def register():
+    from app.models import User
+    from werkzeug.security import generate_password_hash
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        role = request.form.get('role')  # Get role from the form
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists.')
+            return redirect(url_for('routes.register'))
+
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+        new_user = User(username=username, password=hashed_password, role=role)
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('Registration successful. Please log in.')
+        return redirect(url_for('routes.login'))
+    return render_template('register.html', form=form)
+
+@routes.route('/login', methods=['GET', 'POST'])
+def login():
+    from app.models import User
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        role = form.role.data
+
+        # Filter by username and role
+        user = User.query.filter_by(username=username, role=role).first()
+
+        if user and check_password_hash(user.password, password):
+            login_user(user, remember=form.remember.data)
+
+            # Send identity_changed signal
+            identity_changed.send(
+                current_app._get_current_object(), identity=Identity(user.id)
+            )
+
+            if role == 'admin':
+                return redirect(url_for('routes.admin'))
+            else:
+                return redirect(url_for('routes.dashboard'))
+        else:
+            flash('Invalid username, password, or role.')
+    return render_template('login.html', form=form)
+
+@routes.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    # Remove identity information
+    identity_changed.send(
+        current_app._get_current_object(), identity=AnonymousIdentity()
+    )
+    flash('You have been logged out.')
+    return redirect(url_for('routes.login'))
+
+@routes.route('/admin')
+# @roles_required('Admin')
+def admin():
     return render_template('index.html')
 
 @routes.route('/dashboard')
+# @roles_required('Student')
 def dashboard():
     # Fetch all test results from the database
     all_tests = TestResult.query.order_by(TestResult.date.desc()).all()
@@ -197,3 +274,17 @@ def test_details(test_id):
 
     # Render the test analysis page
     return render_template('test_details.html', test=test_result)
+
+
+@identity_loaded.connect_via(current_app)
+def on_identity_loaded(sender, identity):
+    # Set the identity user object
+    identity.user = current_user
+
+    # Add the UserNeed to the identity
+    if hasattr(current_user, 'id'):
+        identity.provides.add(UserNeed(current_user.id))
+
+    # Add each role to the identity
+    if hasattr(current_user, 'role'):
+        identity.provides.add(RoleNeed(current_user.role))
