@@ -29,6 +29,18 @@
         .container {
             margin-top: 60px;
         }
+
+        .correct {
+            color: green;
+        }
+
+        .incorrect {
+            color: red;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -39,6 +51,10 @@
 <div class="container">
     <h1>IITM Inc. Question BOT</h1>
     <form id="selection-form">
+        <div class="form-group">
+            <label>Student ID:</label>
+            <input type="text" id="student-id" placeholder="Enter Student ID" required>
+        </div>
         <div class="form-group">
             <label>Subject:</label>
             <select id="subject" required>
@@ -71,48 +87,26 @@
             <input type="number" id="num-questions" min="1" max="25" placeholder="Enter number of questions" required>
         </div>
         
-        <button type="button" id="generate-button">Generate Questions</button>
+        <button type="button" id="assign-button">Assign Questions</button>
     </form>
 
-    <!-- Question Section -->
-    <div id="question-section" style="display: none;">
-        <h3>QUESTIONS</h3>
-        <form id="answers-form">
-            <div id="questions-container" class="question-block"></div>
-            <button type="button" id="submit-button">Submit Answers</button>
-        </form>
-    </div>
-
-    <!-- Results Section -->
-    <div id="results-section" style="display: none;">
-        <h3>RESULTS</h3>
-        <p id="score"></p>
-        <div style="text-align: right; margin-top: 20px;">
-            <button onclick="window.location.href='/dashboard'" style="background: #f0ad4e; color: white; border: none; padding: 10px; cursor: pointer;">
-                Go to Dashboard
-            </button>
-        </div>
-    </div>
+    <div class="result" id="result"></div>
 </div>
 
 <script>
 // Handle subject selection and populate topics
-document.getElementById('subject').addEventListener('change', function () {
-    const topicSelect = document.getElementById('topic');
+const subjectSelect = document.getElementById('subject');
+const topicSelect = document.getElementById('topic');
+subjectSelect.addEventListener('change', function () {
     topicSelect.innerHTML = '<option value="" disabled selected>Select a topic</option>';
 
-    const selectedSubject = this.value;
-    let topics = [];
+    const topics = {
+        'Mathematics': ['Circles', 'Linear Equations', 'Probability', 'Sets'],
+        'Physics': ['Optics', 'Thermodynamics', 'Electromagnetism', 'Radioactivity'],
+        'Chemistry': ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry']
+    };
 
-    if (selectedSubject === 'Mathematics') {
-        topics = ['Circles', 'Linear Equations', 'Probability', 'Sets'];
-    } else if (selectedSubject === 'Physics') {
-        topics = ['Optics', 'Thermodynamics', 'Electromagnetism', 'Radioactivity'];
-    } else if (selectedSubject === 'Chemistry') {
-        topics = ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry'];
-    }
-
-    topics.forEach(topic => {
+    (topics[this.value] || []).forEach(topic => {
         const option = document.createElement('option');
         option.value = topic;
         option.textContent = topic;
@@ -120,10 +114,10 @@ document.getElementById('subject').addEventListener('change', function () {
     });
 });
 
-// Generate Questions
-document.getElementById('generate-button').addEventListener('click', generateQuestion);
-
-function generateQuestion() {
+// Assign Questions to Students and Display Results
+const assignButton = document.getElementById('assign-button');
+assignButton.addEventListener('click', () => {
+    const studentId = document.getElementById('student-id').value;
     const subject = document.getElementById('subject').value;
     const topic = document.getElementById('topic').value;
     const level = document.getElementById('level').value;
@@ -134,75 +128,27 @@ function generateQuestion() {
         return;
     }
 
+
+
     fetch('/generate_question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, topic, level, numQuestions })
+        body: JSON.stringify({  studentId,subject, topic, level, numQuestions })
     })
     .then(response => response.json())
     .then(data => {
-        const questionsContainer = document.getElementById('questions-container');
-        questionsContainer.innerHTML = '';
-        document.getElementById('question-section').style.display = 'block';
-
-        data.forEach((q, index) => {
-            const questionDiv = document.createElement('div');
-            questionDiv.classList.add('question-block');
-            questionDiv.dataset.questionId = q.id;
-
-            const questionText = document.createElement('p');
-            questionText.innerText = `${index + 1}. ${q.question}`;
-            questionDiv.appendChild(questionText);
-
-            // Ensure options are labeled as A, B, C, D
-            const optionLabels = ['A', 'B', 'C', 'D'];
-            Object.entries(q.options || {}).forEach(([key, value], idx) => {
-                const optionDiv = document.createElement('div');
-                const input = document.createElement('input');
-                input.type = 'radio';
-                input.name = `question-${q.id}`;
-                input.value = optionLabels[idx];  // Set value as A, B, C, D
-
-                const label = document.createElement('label');
-                label.innerText = `${optionLabels[idx]}: ${value}`;
-
-                optionDiv.appendChild(input);
-                optionDiv.appendChild(label);
-                questionDiv.appendChild(optionDiv);
-            });
-
-            questionsContainer.appendChild(questionDiv);
-        });
-    })
-    .catch(error => console.error("Error generating questions:", error));
-}
-
-
-document.getElementById('submit-button').addEventListener('click', () => {
-    const answers = {};
-    document.querySelectorAll('.question-block').forEach(block => {
-        const questionId = block.dataset.questionId;
-        const selectedOption = block.querySelector('input[type="radio"]:checked');
-        if (questionId && selectedOption) {
-            answers[questionId] = selectedOption.value; // Submit option label (A, B, C, D)
+        if (data.error) {
+            document.getElementById('result').innerHTML = `<p class="incorrect">${data.error}</p>`;
+        } else {
+            document.getElementById('result').innerHTML = `<p class="correct">Assigned ${data.length} questions successfully!</p>`;
         }
+    })
+    .catch(error => {
+        console.error("Error assigning questions:", error);
+        document.getElementById('result').innerHTML = `<p class="incorrect">Error assigning questions. Please try again.</p>`;
     });
-
-    fetch('/submit_test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers })
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('results-section').style.display = 'block';
-        document.getElementById('score').innerText = `You scored ${data.score} out of ${data.total_questions}`;
-    })
-    .catch(error => console.error("Error submitting answers:", error));
 });
-
 </script>
-
 
 </body>
 </html>
