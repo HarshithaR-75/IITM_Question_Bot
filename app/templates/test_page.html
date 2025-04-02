@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h2 {
+            text-align: center;
+        }
+        .question-container {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px gray;
+        }
+        .btn-submit {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background-color: darkgreen;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>{{ test.subject }} Test</h2>
+
+    <form id="test-form">
+        {% for question in test.questions %}
+            <div class="question-container">
+                <p><strong>{{ question.question_text }}</strong></p>
+    
+                {% if question.options %}
+                    {% for option, value in question.options.items() %}
+                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" data-question-id="{{ question.id }}"> {{ value }}<br>
+                    {% endfor %}
+                {% else %}
+                    <textarea name="question_{{ question.id }}" rows="3" cols="50" data-question-id="{{ question.id }}"></textarea>
+                {% endif %}
+            </div>
+        {% endfor %}
+    
+        <button type="submit" class="btn-submit">Submit Test</button>
+    </form>
+    
+    <script>
+        // JavaScript to collect responses and submit as JSON
+        document.getElementById('test-form').addEventListener('submit', function (e) {
+            e.preventDefault();  // Prevent default form submission
+    
+            var responses = [];
+            {% for question in test.questions %}
+                var questionId = "{{ question.id }}";
+                var response = {};
+    
+                // Check if it's a radio button (single choice)
+                var radioButton = document.querySelector('input[name="question_' + questionId + '"]:checked');
+                if (radioButton) {
+                    response['answer'] = radioButton.value;
+                } else {
+                    // If it's a text area (open-ended question)
+                    var textarea = document.querySelector('textarea[name="question_' + questionId + '"]');
+                    if (textarea) {
+                        response['answer'] = textarea.value;
+                    }
+                }
+    
+                response['question_id'] = questionId;
+                responses.push(response);
+            {% endfor %}
+    
+            // Submit the responses via an AJAX POST request
+            fetch('/submit_test/{{ test.test_id }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    responses: responses  // Send responses as a JSON object
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle success or failure response
+                if (data.success) {
+                    // Redirect or show success message
+                    window.location.href = '/my_tests';  // You can change this to any URL you'd like
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            })
+            .catch(error => {
+                alert('Error submitting the test.');
+            });
+        });
+    </script>
+    
+</body>
+</html>
