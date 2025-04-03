@@ -136,7 +136,7 @@ def generate_question():
         new_test_id = last_test.test_id + 1 if last_test else 1
 
         # Create a new test entry
-        new_test = Test(test_id=new_test_id, student_id='S001', subject=subject, topic=topic, status="Pending", questions=[])
+        new_test = Test(test_id=new_test_id, student_id= student_id, subject=subject, topic=topic, status="Pending", questions=[])
         db.session.add(new_test)
         db.session.commit()
 
@@ -210,11 +210,11 @@ def my_tests():
 
     # Get the student's tests
     student_tests_pending = Test.query.options(subqueryload(Test.questions))\
-        .filter_by(student_id='S001', status="Pending")\
+        .filter_by(student_id=current_user.student_id, status="Pending")\
         .order_by(Test.test_id.desc()).all()
     
     student_tests_completed = Test.query.options(subqueryload(Test.questions))\
-        .filter_by(student_id='S001', status="completed")\
+        .filter_by(student_id=current_user.student_id, status="completed")\
         .order_by(Test.test_id.desc()).all()
 
     # Pass the tests as separate lists for pending and completed
@@ -224,7 +224,7 @@ def my_tests():
 @routes.route('/start_test/<int:test_id>', methods=['GET'])
 @login_required
 def start_test(test_id):
-    test = Test.query.filter_by(test_id=test_id, student_id="S001").first()
+    test = Test.query.filter_by(test_id=test_id, student_id=current_user.student_id).first()
 
     if not test:
         flash("Test not found or access denied.")
@@ -239,7 +239,7 @@ def start_test(test_id):
 @routes.route('/submit_test/<int:test_id>', methods=['POST'])
 @login_required
 def submit_test(test_id):
-    test = Test.query.filter_by(test_id=test_id, student_id='S001').first()
+    test = Test.query.filter_by(test_id=test_id, student_id=current_user.student_id).first()
 
     if not test:
         return jsonify({"success": False, "message": "Test not found or access denied."})
@@ -259,7 +259,7 @@ def submit_test(test_id):
 
     # Store the test submission
     submission = StudentTestSubmission(
-        student_id='S001',
+        student_id=current_user.student_id,
         test_id=test.test_id,
         responses=responses,
         score=score,
@@ -276,7 +276,7 @@ def submit_test(test_id):
 @login_required
 def view_analysis(test_id):
     # Fetch submission for the test and student
-    submission = StudentTestSubmission.query.filter_by(test_id=test_id, student_id='S001').first()
+    submission = StudentTestSubmission.query.filter_by(test_id=test_id, student_id=current_user.student_id).first()
 
     if not submission:
         flash("Test submission not found.")

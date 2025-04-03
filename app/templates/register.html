@@ -33,9 +33,9 @@
                     </div>
 
                     <div class="mb-3">
-                        {{ form.confirm.label(class="form-label") }}
-                        {{ form.confirm(class="form-control", placeholder="Confirm your password") }}
-                        {% for error in form.confirm.errors %}
+                        {{ form.confirm_password.label(class="form-label") }}
+                        {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
+                        {% for error in form.confirm_password.errors %}
                             <small class="text-danger">{{ error }}</small>
                         {% endfor %}
                     </div>
