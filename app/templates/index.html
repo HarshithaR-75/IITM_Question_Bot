@@ -6,46 +6,114 @@
     <title>Question BOT</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        .dashboard-link {
+        /* General Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #ece9e6, #ffffff);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .logout-container {
             position: absolute;
             top: 20px;
             right: 20px;
         }
 
-        .dashboard-link button {
-            background-color: #007bff;
+        .logout-button {
+            background-color: #dc3545;
             color: white;
-            border: none;
             padding: 10px 15px;
+            border: none;
             border-radius: 5px;
             font-size: 1em;
             cursor: pointer;
+            transition: 0.3s;
         }
 
-        .dashboard-link button:hover {
-            background-color: #0056b3;
+        .logout-button:hover {
+            background-color: #b02a37;
         }
 
         .container {
-            margin-top: 60px;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
         }
 
-        .correct {
-            color: green;
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
         }
 
-        .incorrect {
-            color: red;
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
         }
 
         .result {
             margin-top: 20px;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+        .correct {
+            color: green;
+            background: #eaffea;
+            border: 1px solid green;
+        }
+
+        .incorrect {
+            color: red;
+            background: #ffeaea;
+            border: 1px solid red;
         }
     </style>
 </head>
 <body>
-<div class="dashboard-link">
-    <button onclick="window.location.href='/dashboard'">Dashboard</button>
+
+<!-- Logout Button -->
+<div class="logout-container">
+    <button class="logout-button" onclick="window.location.href='/logout'">Logout</button>
 </div>
 
 <div class="container">
@@ -123,29 +191,27 @@ assignButton.addEventListener('click', () => {
     const level = document.getElementById('level').value;
     const numQuestions = parseInt(document.getElementById('num-questions').value, 10);
 
-    if (!subject || !topic || !level || !numQuestions) {
+    if (!studentId || !subject || !topic || !level || !numQuestions) {
         alert("Please fill all the fields correctly.");
         return;
     }
 
-
-
     fetch('/generate_question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({  studentId,subject, topic, level, numQuestions })
+        body: JSON.stringify({ studentId, subject, topic, level, numQuestions })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            document.getElementById('result').innerHTML = `<p class="incorrect">${data.error}</p>`;
+            document.getElementById('result').innerHTML = `<p class="result incorrect">${data.error}</p>`;
         } else {
-            document.getElementById('result').innerHTML = `<p class="correct">Assigned ${data.length} questions successfully!</p>`;
+            document.getElementById('result').innerHTML = `<p class="result correct">Assigned questions successfully!</p>`;
         }
     })
     .catch(error => {
         console.error("Error assigning questions:", error);
-        document.getElementById('result').innerHTML = `<p class="incorrect">Error assigning questions. Please try again.</p>`;
+        document.getElementById('result').innerHTML = `<p class="result incorrect">Error assigning questions. Please try again.</p>`;
     });
 });
 </script>

@@ -121,6 +121,7 @@ client = openai.OpenAI(
     api_key=os.environ.get("GITHUB_TOKEN"),
 )
 
+
 @routes.route('/generate_question', methods=['POST'])
 def generate_question():
     data = request.get_json()
@@ -136,52 +137,79 @@ def generate_question():
         new_test_id = last_test.test_id + 1 if last_test else 1
 
         # Create a new test entry
-        new_test = Test(test_id=new_test_id, student_id= student_id, subject=subject, topic=topic, status="Pending", questions=[])
+        new_test = Test(test_id=new_test_id, student_id=student_id, subject=subject, topic=topic, status="Pending", questions=[])
         db.session.add(new_test)
         db.session.commit()
 
     # Fetch existing questions
     questions = Question.query.filter_by(subject=subject, topic=topic, level=level).limit(num_questions).all()
     question_list = [
-        {"id": q.id, "question": q.question_text, "options": q.options, "correct_answer": q.answer}
+        {"id": q.id, "question": q.question_text, "options": q.options, "correct_answer": q.answer,  "solution": q.solution}
         for q in questions
     ]
 
-    # If not enough questions, generate more using OpenAI
+    # If not enough questions exist, generate new ones using OpenAI
     if len(questions) < num_questions:
         remaining_questions = num_questions - len(questions)
-        prompt = f"Generate {remaining_questions} {level}-level questions on {topic} in {subject} with 4 options and answers in JSON format."
-        
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "You are an AI tutor helping generate questions."},
-                {"role": "user", "content": prompt}
-            ],
-            model="gpt-4o-mini", temperature=1, max_tokens=1000, top_p=1
-        )
+
+        prompt = f"""
+        Generate {remaining_questions} {level}-level multiple-choice questions on {topic} in {subject}.
+        Each question must have exactly 4 options (A, B, C, D) and one correct answer and a detailed solution.
+        Format the response strictly as a JSON array:
+        [
+          {{
+            "question": "...",
+            "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
+            "correct_answer": "..."
+            "solution":"...."
+          }}
+        ]
+        """
 
         try:
-            ai_response = json.loads(re.sub(r'```json|```', '', response.choices[0].message.content.strip()))
-            if not isinstance(ai_response, list): ai_response = [ai_response]
+            response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are an AI tutor helping generate structured questions."},
+                    {"role": "user", "content": prompt}
+                ],
+                model="gpt-4o-mini", temperature=1, max_tokens=1000, top_p=1
+            )
+
+            raw_response = response.choices[0].message.content.strip()
+            print("Raw AI Response:", raw_response)  # Debugging step
+
+            if not raw_response:
+                return jsonify({"error": "Empty response from OpenAI"}), 500
+
+            # Remove Markdown JSON formatting if present
+            raw_response = re.sub(r'```json|```', '', raw_response)
+
+            # Parse the JSON response
+            ai_response = json.loads(raw_response)
+
+            if not isinstance(ai_response, list):
+                ai_response = [ai_response]
 
             new_questions = []
             for q in ai_response:
-                if not all(k in q for k in ("question", "options", "correct_answer")):
+                if not all(k in q for k in ("question", "options", "correct_answer", "solution")):
                     continue  # Skip invalid entries
-                
+
                 new_question = Question(
                     subject=subject, topic=topic, level=level, question_text=q["question"],
                     options=q.get("options", {}), answer=q["correct_answer"],
-                    solution=q.get("detailed_solution", "No solution provided")
+                    solution=q["solution"]
                 )
                 new_questions.append(new_question)
+
                 question_list.append({
                     "id": None,  # ID will be assigned after commit
                     "question": new_question.question_text,
                     "options": new_question.options,
-                    "correct_answer": new_question.answer
+                    "correct_answer": new_question.answer,
+                    "solution": new_question.solution
                 })
-            
+
             if new_questions:
                 db.session.add_all(new_questions)
                 db.session.commit()
@@ -192,6 +220,8 @@ def generate_question():
 
         except json.JSONDecodeError as e:
             return jsonify({"error": f"Error parsing AI response: {str(e)}"}), 500
+        except Exception as e:
+            return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
     # Update test entry with generated questions
     question_objs = Question.query.filter(Question.id.in_([q["id"] for q in question_list if q["id"] is not None])).all()
