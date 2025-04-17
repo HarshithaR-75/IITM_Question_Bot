@@ -120,8 +120,13 @@
     <h1>IITM Inc. Question BOT</h1>
     <form id="selection-form">
         <div class="form-group">
-            <label>Student ID:</label>
-            <input type="text" id="student-id" placeholder="Enter Student ID" required>
+            <label>Select Students:</label>
+            <select id="student-ids" multiple required>
+                {% for student in students %}
+                    <option value="{{ student.student_id }}">{{ student.student_id }} - {{ student.username }}</option>
+                {% endfor %}
+            </select>
+            <small>Hold Ctrl (or Cmd on Mac) to select multiple students</small>
         </div>
         <div class="form-group">
             <label>Subject:</label>
@@ -162,59 +167,60 @@
 </div>
 
 <script>
-// Handle subject selection and populate topics
-const subjectSelect = document.getElementById('subject');
-const topicSelect = document.getElementById('topic');
-subjectSelect.addEventListener('change', function () {
-    topicSelect.innerHTML = '<option value="" disabled selected>Select a topic</option>';
+    const subjectSelect = document.getElementById('subject');
+    const topicSelect = document.getElementById('topic');
 
-    const topics = {
-        'Mathematics': ['Circles', 'Linear Equations', 'Probability', 'Sets'],
-        'Physics': ['Optics', 'Thermodynamics', 'Electromagnetism', 'Radioactivity'],
-        'Chemistry': ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry']
-    };
+    subjectSelect.addEventListener('change', function () {
+        topicSelect.innerHTML = '<option value="" disabled selected>Select a topic</option>';
 
-    (topics[this.value] || []).forEach(topic => {
-        const option = document.createElement('option');
-        option.value = topic;
-        option.textContent = topic;
-        topicSelect.appendChild(option);
+        const topics = {
+            'Mathematics': ['Circles', 'Linear Equations', 'Probability', 'Sets'],
+            'Physics': ['Optics', 'Thermodynamics', 'Electromagnetism', 'Radioactivity'],
+            'Chemistry': ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry']
+        };
+
+        (topics[this.value] || []).forEach(topic => {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.textContent = topic;
+            topicSelect.appendChild(option);
+        });
     });
-});
 
-// Assign Questions to Students and Display Results
-const assignButton = document.getElementById('assign-button');
-assignButton.addEventListener('click', () => {
-    const studentId = document.getElementById('student-id').value;
-    const subject = document.getElementById('subject').value;
-    const topic = document.getElementById('topic').value;
-    const level = document.getElementById('level').value;
-    const numQuestions = parseInt(document.getElementById('num-questions').value, 10);
+    const assignButton = document.getElementById('assign-button');
+    assignButton.addEventListener('click', () => {
+        const studentIdsSelect = document.getElementById('student-ids');
+        const studentIds = Array.from(studentIdsSelect.selectedOptions).map(opt => opt.value);
+        const subject = document.getElementById('subject').value;
+        const topic = document.getElementById('topic').value;
+        const level = document.getElementById('level').value;
+        const numQuestions = parseInt(document.getElementById('num-questions').value, 10);
 
-    if (!studentId || !subject || !topic || !level || !numQuestions) {
-        alert("Please fill all the fields correctly.");
-        return;
-    }
-
-    fetch('/generate_question', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, subject, topic, level, numQuestions })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById('result').innerHTML = `<p class="result incorrect">${data.error}</p>`;
-        } else {
-            document.getElementById('result').innerHTML = `<p class="result correct">Assigned questions successfully!</p>`;
+        if (!studentIds.length || !subject || !topic || !level || !numQuestions) {
+            alert("Please fill all the fields correctly.");
+            return;
         }
-    })
-    .catch(error => {
-        console.error("Error assigning questions:", error);
-        document.getElementById('result').innerHTML = `<p class="result incorrect">Error assigning questions. Please try again.</p>`;
+
+        fetch('/generate_question', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentIds, subject, topic, level, numQuestions })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('result').innerHTML = `<p class="result incorrect">${data.error}</p>`;
+            } else {
+                document.getElementById('result').innerHTML = `<p class="result correct">Assigned questions successfully!</p>`;
+            }
+        })
+        .catch(error => {
+            console.error("Error assigning questions:", error);
+            document.getElementById('result').innerHTML = `<p class="result incorrect">Error assigning questions. Please try again.</p>`;
+        });
     });
-});
 </script>
+
 
 </body>
 </html>

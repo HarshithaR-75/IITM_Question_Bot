@@ -114,41 +114,54 @@ def admin():
         flash("Access Denied.")
         return redirect(url_for('routes.login'))
      else:
-       return render_template('index.html')
+       students = User.query.filter_by(role="Student").all()
+       return render_template('index.html',students=students)
 
 client = openai.OpenAI(
     base_url="https://models.inference.ai.azure.com",
     api_key=os.environ.get("GITHUB_TOKEN"),
 )
 
-
 @routes.route('/generate_question', methods=['POST'])
 def generate_question():
     data = request.get_json()
-    student_id, subject, topic, level = data.get('studentId'), data.get('subject'), data.get('topic'), data.get('level')
+    student_ids = data.get('studentIds', [])
+    subject = data.get('subject')
+    topic = data.get('topic')
+    level = data.get('level')
+
     num_questions = int(data.get('numQuestions', 1))
 
-    if not all([student_id, subject, topic, level, num_questions]):
+    if not all([student_ids, subject, topic, level, num_questions]) or not isinstance(student_ids, list):
         return jsonify({"error": "Missing required fields"}), 400
 
-    with db.session.no_autoflush:  # Avoid premature commits
-        # Find the highest existing test_id and increment it
+    with db.session.no_autoflush:
         last_test = Test.query.order_by(Test.test_id.desc()).first()
         new_test_id = last_test.test_id + 1 if last_test else 1
 
-        # Create a new test entry
-        new_test = Test(test_id=new_test_id, student_id=student_id, subject=subject, topic=topic, status="Pending", questions=[])
-        db.session.add(new_test)
+        tests_created = []
+
+        for student_id in student_ids:
+            new_test = Test(
+                test_id=new_test_id,
+                student_id=student_id,
+                subject=subject,
+                topic=topic,
+                status="Pending",
+                questions=[]
+            )
+            db.session.add(new_test)
+            tests_created.append(new_test)
+            new_test_id += 1
+
         db.session.commit()
 
-    # Fetch existing questions
     questions = Question.query.filter_by(subject=subject, topic=topic, level=level).limit(num_questions).all()
     question_list = [
-        {"id": q.id, "question": q.question_text, "options": q.options, "correct_answer": q.answer,  "solution": q.solution}
+        {"id": q.id, "question": q.question_text, "options": q.options, "correct_answer": q.answer, "solution": q.solution}
         for q in questions
     ]
 
-    # If not enough questions exist, generate new ones using OpenAI
     if len(questions) < num_questions:
         remaining_questions = num_questions - len(questions)
 
@@ -160,8 +173,8 @@ def generate_question():
           {{
             "question": "...",
             "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
-            "correct_answer": "..."
-            "solution":"...."
+            "correct_answer": "...",
+            "solution": "...."
           }}
         ]
         """
@@ -176,15 +189,12 @@ def generate_question():
             )
 
             raw_response = response.choices[0].message.content.strip()
-            print("Raw AI Response:", raw_response)  # Debugging step
+            print("Raw AI Response:", raw_response)
 
             if not raw_response:
                 return jsonify({"error": "Empty response from OpenAI"}), 500
 
-            # Remove Markdown JSON formatting if present
             raw_response = re.sub(r'```json|```', '', raw_response)
-
-            # Parse the JSON response
             ai_response = json.loads(raw_response)
 
             if not isinstance(ai_response, list):
@@ -193,17 +203,21 @@ def generate_question():
             new_questions = []
             for q in ai_response:
                 if not all(k in q for k in ("question", "options", "correct_answer", "solution")):
-                    continue  # Skip invalid entries
+                    continue
 
                 new_question = Question(
-                    subject=subject, topic=topic, level=level, question_text=q["question"],
-                    options=q.get("options", {}), answer=q["correct_answer"],
+                    subject=subject,
+                    topic=topic,
+                    level=level,
+                    question_text=q["question"],
+                    options=q.get("options", {}),
+                    answer=q["correct_answer"],
                     solution=q["solution"]
                 )
                 new_questions.append(new_question)
 
                 question_list.append({
-                    "id": None,  # ID will be assigned after commit
+                    "id": None,
                     "question": new_question.question_text,
                     "options": new_question.options,
                     "correct_answer": new_question.answer,
@@ -214,7 +228,6 @@ def generate_question():
                 db.session.add_all(new_questions)
                 db.session.commit()
 
-                # Update with actual IDs
                 for i, q in enumerate(new_questions):
                     question_list[len(questions) + i]["id"] = q.id
 
@@ -223,12 +236,19 @@ def generate_question():
         except Exception as e:
             return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
-    # Update test entry with generated questions
     question_objs = Question.query.filter(Question.id.in_([q["id"] for q in question_list if q["id"] is not None])).all()
-    new_test.questions.extend(question_objs)
+
+    for test in tests_created:
+        test.questions.extend(question_objs)
+
     db.session.commit()
 
-    return jsonify({"test_id": new_test_id, "questions": question_list}), 201
+    return jsonify({
+        "message": f"Test assigned to {len(tests_created)} student(s)",
+        "test_ids": [test.test_id for test in tests_created],
+        "questions": question_list
+    }), 201
+
 
 @routes.route('/my_tests')
 @login_required
