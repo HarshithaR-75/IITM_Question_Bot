@@ -30,7 +30,7 @@ def register():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-        role_name = request.form.get('role')
+        role_name = 'Student'
 
         if User.query.filter_by(username=username).first():
             flash('Username already exists.')
