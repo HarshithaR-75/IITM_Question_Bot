@@ -129,10 +129,10 @@ def generate_question():
     subject = data.get('subject')
     topic = data.get('topic')
     level = data.get('level')
-
     num_questions = int(data.get('numQuestions', 1))
+    time_limit = data.get('timeLimit') 
 
-    if not all([student_ids, subject, topic, level, num_questions]) or not isinstance(student_ids, list):
+    if not all([student_ids, subject, topic, level, num_questions, time_limit]) or not isinstance(student_ids, list):
         return jsonify({"error": "Missing required fields"}), 400
 
     with db.session.no_autoflush:
@@ -148,7 +148,8 @@ def generate_question():
                 subject=subject,
                 topic=topic,
                 status="Pending",
-                questions=[]
+                questions=[],
+                duration_minutes=time_limit
             )
             db.session.add(new_test)
             tests_created.append(new_test)

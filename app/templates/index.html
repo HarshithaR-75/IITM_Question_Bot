@@ -159,6 +159,11 @@
             <label>Number of Questions:</label>
             <input type="number" id="num-questions" min="1" max="25" placeholder="Enter number of questions" required>
         </div>
+
+        <div class="form-group">
+            <label>Time Limit (in minutes):</label>
+            <input type="number" id="time-limit" min="1" max="180" placeholder="Enter time limit" required>
+        </div>
         
         <button type="button" id="assign-button">Assign Questions</button>
     </form>
@@ -195,6 +200,7 @@
         const topic = document.getElementById('topic').value;
         const level = document.getElementById('level').value;
         const numQuestions = parseInt(document.getElementById('num-questions').value, 10);
+        const timeLimit = parseInt(document.getElementById('time-limit').value, 10);
 
         if (!studentIds.length || !subject || !topic || !level || !numQuestions) {
             alert("Please fill all the fields correctly.");
@@ -204,7 +210,7 @@
         fetch('/generate_question', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentIds, subject, topic, level, numQuestions })
+            body: JSON.stringify({ studentIds, subject, topic, level, numQuestions, timeLimit })
         })
         .then(response => response.json())
         .then(data => {

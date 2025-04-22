@@ -45,6 +45,7 @@ class Test(db.Model):
     student_id = db.Column(db.String(50), nullable=False)  # Assigned Student ID
     subject = db.Column(db.String(50), nullable=False)
     topic = db.Column(db.String(100), nullable=False)
+    duration_minutes = db.Column(db.Integer)
     status = db.Column(db.String(20), default="Pending")  # Test Status (Pending/Completed)
 
     # Many-to-Many Relationship with Questions
@@ -74,7 +75,7 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(10), unique=True, nullable=True)  # Add this field
+    student_id = db.Column(db.String(10), unique=True, nullable=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), nullable=False)

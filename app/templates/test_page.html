@@ -1,115 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Page</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h2 {
-            text-align: center;
-        }
-        .question-container {
-            background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            box-shadow: 0px 0px 5px gray;
-        }
-        .btn-submit {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background-color: green;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .btn-submit:hover {
-            background-color: darkgreen;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ test.subject }} Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    #timer {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #ef4444;
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.375rem;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+
+    .question {
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: #f9fafb;
+      border-left: 4px solid #2563eb;
+      border-radius: 0.5rem;
+    }
+
+    .question p {
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .options label {
+      display: block;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+    }
+
+    .options input[type="radio"] {
+      margin-right: 0.5rem;
+      accent-color: #2563eb;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid #d1d5db;
+      font-size: 1rem;
+      resize: vertical;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .btn-submit {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      background: #16a34a;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .btn-submit:hover {
+      background: #15803d;
+    }
+  </style>
 </head>
 <body>
 
+  <div class="container">
     <h2>{{ test.subject }} Test</h2>
+    <div id="timer">Loading...</div>
 
     <form id="test-form">
-        {% for question in test.questions %}
-            <div class="question-container">
-                <p><strong>{{ question.question_text }}</strong></p>
-    
-                {% if question.options %}
-                    {% for option, value in question.options.items() %}
-                        <input type="radio" name="question_{{ question.id }}" value="{{ option }}" data-question-id="{{ question.id }}"> {{ value }}<br>
-                    {% endfor %}
-                {% else %}
-                    <textarea name="question_{{ question.id }}" rows="3" cols="50" data-question-id="{{ question.id }}"></textarea>
-                {% endif %}
+      {% for question in test.questions %}
+        <div class="question" data-question-id="{{ question.id }}">
+          <p>{{ loop.index }}. {{ question.question_text }}</p>
+
+          {% if question.options %}
+            <div class="options">
+              {% for option, value in question.options.items() %}
+                <label>
+                  <input type="radio" name="question_{{ question.id }}" value="{{ option }}" />
+                  {{ value }}
+                </label>
+              {% endfor %}
             </div>
-        {% endfor %}
-    
-        <button type="submit" class="btn-submit">Submit Test</button>
+          {% else %}
+            <textarea name="question_{{ question.id }}" rows="4" placeholder="Your answer..."></textarea>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="btn-submit">Submit Test</button>
     </form>
-    
-    <script>
-        // JavaScript to collect responses and submit as JSON
-        document.getElementById('test-form').addEventListener('submit', function (e) {
-            e.preventDefault();  // Prevent default form submission
-    
-            var responses = [];
-            {% for question in test.questions %}
-                var questionId = "{{ question.id }}";
-                var response = {};
-    
-                // Check if it's a radio button (single choice)
-                var radioButton = document.querySelector('input[name="question_' + questionId + '"]:checked');
-                if (radioButton) {
-                    response['answer'] = radioButton.value;
-                } else {
-                    // If it's a text area (open-ended question)
-                    var textarea = document.querySelector('textarea[name="question_' + questionId + '"]');
-                    if (textarea) {
-                        response['answer'] = textarea.value;
-                    }
-                }
-    
-                response['question_id'] = questionId;
-                responses.push(response);
-            {% endfor %}
-    
-            // Submit the responses via an AJAX POST request
-            fetch('/submit_test/{{ test.test_id }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    responses: responses  // Send responses as a JSON object
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Handle success or failure response
-                if (data.success) {
-                    // Redirect or show success message
-                    window.location.href = '/my_tests';  // You can change this to any URL you'd like
-                } else {
-                    alert('Something went wrong. Please try again.');
-                }
-            })
-            .catch(error => {
-                alert('Error submitting the test.');
-            });
+  </div>
+
+  <script>
+    // Initialize timer
+    let timeRemaining = {{ test.duration_minutes | default(10) }} * 60;
+    const timerEl = document.getElementById('timer');
+
+    function updateTimer() {
+      const min = Math.floor(timeRemaining / 60);
+      const sec = timeRemaining % 60;
+      timerEl.textContent = `Time Remaining: ${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    function submitTest() {
+      const answers = [];
+      document.querySelectorAll('.question').forEach(q => {
+        const qid = q.dataset.questionId;
+        const selected = q.querySelector('input[type="radio"]:checked');
+        const text = q.querySelector('textarea');
+        answers.push({
+          question_id: qid,
+          answer: selected ? selected.value : (text ? text.value : '')
         });
-    </script>
-    
+      });
+
+      // Disable inputs
+      document.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
+
+      fetch('/submit_test/{{ test.test_id }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responses: answers })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) window.location.href = '/my_tests';
+        else alert("Submission failed!");
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error submitting test.");
+      });
+    }
+
+    document.getElementById('test-form').addEventListener('submit', e => {
+      e.preventDefault();
+      clearInterval(timerInterval);
+      submitTest();
+    });
+
+    const timerInterval = setInterval(() => {
+      if (timeRemaining <= 0) {
+        clearInterval(timerInterval);
+        alert("Time's up! Submitting automatically...");
+        submitTest();
+      } else {
+        timeRemaining--;
+        updateTimer();
+      }
+    }, 1000);
+
+    updateTimer();
+
+    // Prevent going back
+    function preventBackNavigation() {
+      history.pushState(null, '', location.href);
+      window.addEventListener('popstate', function () {
+        history.pushState(null, '', location.href);
+        if (!window.backAlertShown) {
+          alert("Back navigation is disabled during the test.");
+          window.backAlertShown = true; // Ensure it only shows once
+        }
+      });
+    }
+
+    preventBackNavigation();
+
+    // Optional: Prevent refresh/closing
+    window.addEventListener('beforeunload', function (e) {
+      e.preventDefault();
+      e.returnValue = ''; // Display a confirmation dialog
+    });
+
+    // Optional: Fullscreen Mode (can help focus students)
+    document.addEventListener("DOMContentLoaded", function () {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      }
+    });
+  </script>
 </body>
 </html>
