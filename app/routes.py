@@ -122,79 +122,80 @@ client = openai.OpenAI(
     api_key=os.environ.get("GITHUB_TOKEN"),
 )
 
+
+
+@routes.route('/get_students', methods=['GET'])
+def get_students(): 
+    students = User.query.filter_by(role='Student').all() 
+    student_list = [{"id": s.student_id, "name": s.username} for s in students]
+    return jsonify({"students": student_list})
+
+@routes.route('/get_filtered_questions', methods=['GET'])
+def get_filtered_questions():
+    subject = request.args.get('subject')
+    topic = request.args.get('topic')
+    level = request.args.get('level')
+
+    if not all([subject, topic, level]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    questions = Question.query.filter_by(subject=subject, topic=topic, level=level).all()
+
+    question_list = [{
+        "id": q.id,
+        "question": q.question_text,
+        "options": q.options,
+        "correct_answer": q.answer,
+        "solution": q.solution
+    } for q in questions]
+
+    return jsonify({"questions": question_list})
+
+
+
 @routes.route('/generate_question', methods=['POST'])
 def generate_question():
     data = request.get_json()
+    print(data) 
     student_ids = data.get('studentIds', [])
     subject = data.get('subject')
     topic = data.get('topic')
     level = data.get('level')
-    num_questions = int(data.get('numQuestions', 1))
-    time_limit = data.get('timeLimit') 
+    time_limit = data.get('timeLimit')
+    selected_question_ids = data.get('questionIds', [])
 
-    if not all([student_ids, subject, topic, level, num_questions, time_limit]) or not isinstance(student_ids, list):
+    if not all([student_ids, subject, topic, level, time_limit]) or not isinstance(student_ids, list):
         return jsonify({"error": "Missing required fields"}), 400
 
-    with db.session.no_autoflush:
-        last_test = Test.query.order_by(Test.test_id.desc()).first()
-        new_test_id = last_test.test_id + 1 if last_test else 1
+    existing_questions = Question.query.filter(Question.id.in_(selected_question_ids)).all()
 
-        tests_created = []
-
-        for student_id in student_ids:
-            new_test = Test(
-                test_id=new_test_id,
-                student_id=student_id,
-                subject=subject,
-                topic=topic,
-                status="Pending",
-                questions=[],
-                duration_minutes=time_limit
-            )
-            db.session.add(new_test)
-            tests_created.append(new_test)
-            new_test_id += 1
-
-        db.session.commit()
-
-    questions = Question.query.filter_by(subject=subject, topic=topic, level=level).limit(num_questions).all()
-    question_list = [
-        {"id": q.id, "question": q.question_text, "options": q.options, "correct_answer": q.answer, "solution": q.solution}
-        for q in questions
-    ]
-
-    if len(questions) < num_questions:
-        remaining_questions = num_questions - len(questions)
-
+    if len(existing_questions) < len(selected_question_ids):
+        remaining_count = len(selected_question_ids) - len(existing_questions)
+        
         prompt = f"""
-        Generate {remaining_questions} {level}-level multiple-choice questions on {topic} in {subject}.
-        Each question must have exactly 4 options (A, B, C, D) and one correct answer and a detailed solution.
-        Format the response strictly as a JSON array:
+        Generate {remaining_count} {level}-level multiple-choice questions on {topic} in {subject}.
+        Each question must have exactly 4 options (A, B, C, D), one correct answer, and a detailed solution.
+        Return a strict JSON array:
         [
-          {{
-            "question": "...",
-            "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
-            "correct_answer": "...",
-            "solution": "...."
-          }}
+            {{
+                "question": "...",
+                "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
+                "correct_answer": "...",
+                "solution": "..."
+            }}
         ]
         """
 
         try:
             response = client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are an AI tutor helping generate structured questions."},
+                    {"role": "system", "content": "You are an AI tutor generating structured questions."},
                     {"role": "user", "content": prompt}
                 ],
                 model="gpt-4o-mini", temperature=1, max_tokens=1000, top_p=1
             )
 
             raw_response = response.choices[0].message.content.strip()
-            print("Raw AI Response:", raw_response)
-
-            if not raw_response:
-                return jsonify({"error": "Empty response from OpenAI"}), 500
-
             raw_response = re.sub(r'```json|```', '', raw_response)
             ai_response = json.loads(raw_response)
 
@@ -205,8 +206,7 @@ def generate_question():
             for q in ai_response:
                 if not all(k in q for k in ("question", "options", "correct_answer", "solution")):
                     continue
-
-                new_question = Question(
+                new_q = Question(
                     subject=subject,
                     topic=topic,
                     level=level,
@@ -215,41 +215,65 @@ def generate_question():
                     answer=q["correct_answer"],
                     solution=q["solution"]
                 )
-                new_questions.append(new_question)
+                db.session.add(new_q)
+                new_questions.append(new_q)
 
-                question_list.append({
-                    "id": None,
-                    "question": new_question.question_text,
-                    "options": new_question.options,
-                    "correct_answer": new_question.answer,
-                    "solution": new_question.solution
-                })
-
-            if new_questions:
-                db.session.add_all(new_questions)
-                db.session.commit()
-
-                for i, q in enumerate(new_questions):
-                    question_list[len(questions) + i]["id"] = q.id
+            db.session.commit()
+            existing_questions.extend(new_questions)
 
         except json.JSONDecodeError as e:
-            return jsonify({"error": f"Error parsing AI response: {str(e)}"}), 500
+            return jsonify({"error": f"JSON parse error from OpenAI: {str(e)}"}), 500
         except Exception as e:
-            return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+            return jsonify({"error": f"OpenAI error: {str(e)}"}), 500
 
-    question_objs = Question.query.filter(Question.id.in_([q["id"] for q in question_list if q["id"] is not None])).all()
+    # Create tests for each student
+    with db.session.no_autoflush:
+        last_test = Test.query.order_by(Test.test_id.desc()).first()
+        new_test_id = last_test.test_id + 1 if last_test else 1
+        test_ids = []
 
-    for test in tests_created:
-        test.questions.extend(question_objs)
+        for student_id in student_ids:
+            new_test = Test(
+                test_id=new_test_id,
+                student_id=student_id,
+                subject=subject,
+                topic=topic,
+                status="Pending",
+                questions=existing_questions,
+                duration_minutes=time_limit
+            )
+            db.session.add(new_test)
+            test_ids.append(new_test_id)
+            new_test_id += 1
 
-    db.session.commit()
+        db.session.commit()
 
     return jsonify({
-        "message": f"Test assigned to {len(tests_created)} student(s)",
-        "test_ids": [test.test_id for test in tests_created],
-        "questions": question_list
+        "message": f"Test assigned to {len(student_ids)} student(s)",
+        "test_ids": test_ids
     }), 201
 
+@routes.route('/fetch_questions', methods=['POST'])
+def fetch_questions():
+    subject = request.form.get('subject')
+    topic = request.form.get('topic')
+    level = request.form.get('level')
+
+    if not all([subject, topic, level]):
+        return jsonify({"error": "Missing parameters"}), 400
+
+    questions = Question.query.filter_by(subject=subject, topic=topic, level=level).all()
+
+    return jsonify([
+        {
+            "id": q.id,
+            "question": q.question_text,
+            "options": q.options,
+            "answer": q.answer,
+            "solution": q.solution
+        }
+        for q in questions
+    ])
 
 @routes.route('/my_tests')
 @login_required

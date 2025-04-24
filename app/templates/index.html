@@ -1,232 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Question BOT</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        /* General Styling */
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(to right, #ece9e6, #ffffff);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        .logout-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
-
-        .logout-button {
-            background-color: #dc3545;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .logout-button:hover {
-            background-color: #b02a37;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            width: 400px;
-            text-align: center;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1em;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            font-weight: bold;
-            border-radius: 5px;
-        }
-
-        .correct {
-            color: green;
-            background: #eaffea;
-            border: 1px solid green;
-        }
-
-        .incorrect {
-            color: red;
-            background: #ffeaea;
-            border: 1px solid red;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate and Assign Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
+<body class="bg-light">
 
-<!-- Logout Button -->
-<div class="logout-container">
-    <button class="logout-button" onclick="window.location.href='/logout'">Logout</button>
-</div>
+  <div class="container py-5">
+    <div class="position-fixed top-0 end-0 p-3">
+      <a href="{{ url_for('routes.logout') }}" class="btn btn-outline-danger">Logout</a>
+    </div>
 
-<div class="container">
-    <h1>IITM Inc. Question BOT</h1>
-    <form id="selection-form">
-        <div class="form-group">
-            <label>Select Students:</label>
-            <select id="student-ids" multiple required>
-                {% for student in students %}
-                    <option value="{{ student.student_id }}">{{ student.student_id }} - {{ student.username }}</option>
-                {% endfor %}
-            </select>
-            <small>Hold Ctrl (or Cmd on Mac) to select multiple students</small>
-        </div>
-        <div class="form-group">
-            <label>Subject:</label>
-            <select id="subject" required>
-                <option value="" disabled selected>Select a subject</option>
-                <option value="Mathematics">Mathematics</option>
-                <option value="Physics">Physics</option>
-                <option value="Chemistry">Chemistry</option>
-            </select>
-        </div>
+    <h2 class="mb-4">Generate & Assign Test</h2>
 
-        <div class="form-group">
-            <label>Topic:</label>
-            <select id="topic" required>
-                <option value="" disabled selected>Select a topic</option>
-            </select>
-        </div>
+    <form id="questionForm">
+      <div class="mb-3">
+        <label for="studentIds" class="form-label">Select Students</label>
+        <div id="studentCheckboxes"></div>
+        <div id="studentError" class="text-danger mt-1" style="display: none;">Please select at least one student.</div>
+      </div>
 
-        <div class="form-group">
-            <label>Level of Question:</label>
-            <select id="level" required>
-                <option value="" disabled selected>Select difficulty level</option>
-                <option value="Basic">Basic</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-            </select>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="subject" class="form-label">Subject</label>
+          <select class="form-select" id="subject" required>
+            <option value="">Select Subject</option>
+            <option value="Physics">Physics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Mathematics">Mathematics</option>
+          </select>
         </div>
+        <div class="col-md-4">
+          <label for="topic" class="form-label">Topic</label>
+          <select class="form-select" id="topic" required disabled>
+            <option value="">Select Topic</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="level" class="form-label">Difficulty</label>
+          <select class="form-select" id="level" required>
+            <option value="">Select Difficulty Level</option>
+            <option value="Basic">Basic</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </div>
+      </div>
 
-        <div class="form-group">
-            <label>Number of Questions:</label>
-            <input type="number" id="num-questions" min="1" max="25" placeholder="Enter number of questions" required>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="numQuestions" class="form-label">Number of Questions</label>
+          <input type="number" class="form-control" id="numQuestions" min="1" required>
         </div>
+        <div class="col-md-4">
+          <label for="timeLimit" class="form-label">Time Limit (minutes)</label>
+          <input type="number" class="form-control" id="timeLimit" min="1" required>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="button" class="btn btn-primary w-100" onclick="fetchFilteredQuestions()">Fetch Existing Questions</button>
+        </div>
+      </div>
 
-        <div class="form-group">
-            <label>Time Limit (in minutes):</label>
-            <input type="number" id="time-limit" min="1" max="180" placeholder="Enter time limit" required>
-        </div>
-        
-        <button type="button" id="assign-button">Assign Questions</button>
+      <div class="mb-3">
+        <h5>Available Questions</h5>
+        <div id="questionsList" class="border p-3 bg-white" style="max-height: 300px; overflow-y: scroll;"></div>
+      </div>
+
+      <button type="submit" class="btn btn-success" id="assignBtn" disabled>Assign Test</button>
     </form>
 
-    <div class="result" id="result"></div>
-</div>
+    <div id="responseBox" class="mt-4"></div>
+  </div>
 
-<script>
-    const subjectSelect = document.getElementById('subject');
-    const topicSelect = document.getElementById('topic');
-
-    subjectSelect.addEventListener('change', function () {
-        topicSelect.innerHTML = '<option value="" disabled selected>Select a topic</option>';
-
-        const topics = {
-            'Mathematics': ['Circles', 'Linear Equations', 'Probability', 'Sets'],
-            'Physics': ['Optics', 'Thermodynamics', 'Electromagnetism', 'Radioactivity'],
-            'Chemistry': ['Chemical Reactions', 'Periodic Table', 'Organic Chemistry']
-        };
-
-        (topics[this.value] || []).forEach(topic => {
-            const option = document.createElement('option');
-            option.value = topic;
-            option.textContent = topic;
-            topicSelect.appendChild(option);
+  <script>
+    // Load student checkboxes
+    fetch('/get_students')
+      .then(res => res.json())
+      .then(data => {
+        const studentDiv = document.getElementById('studentCheckboxes');
+        data.students.forEach(s => {
+          const checkbox = `
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="studentIds" value="${s.id}" id="student_${s.id}">
+              <label class="form-check-label" for="student_${s.id}">${s.name}</label>
+            </div>`;
+          studentDiv.insertAdjacentHTML('beforeend', checkbox);
         });
-    });
+      });
 
-    const assignButton = document.getElementById('assign-button');
-    assignButton.addEventListener('click', () => {
-        const studentIdsSelect = document.getElementById('student-ids');
-        const studentIds = Array.from(studentIdsSelect.selectedOptions).map(opt => opt.value);
-        const subject = document.getElementById('subject').value;
-        const topic = document.getElementById('topic').value;
-        const level = document.getElementById('level').value;
-        const numQuestions = parseInt(document.getElementById('num-questions').value, 10);
-        const timeLimit = parseInt(document.getElementById('time-limit').value, 10);
+    const subjectsTopics = {
+      Physics: ['Mechanics', 'Electromagnetism', 'Optics', 'Thermodynamics', 'Radioactivity'],
+      Chemistry: ['Periodic Table', 'Chemical Reactions', 'Organic Chemistry'],
+      Mathematics: ['Circles', 'Linear Equations', 'Quadratic Equations', 'Sets', 'Algebra', 'Probability']
+    };
 
-        if (!studentIds.length || !subject || !topic || !level || !numQuestions) {
-            alert("Please fill all the fields correctly.");
-            return;
-        }
+    function populateTopics() {
+      const subject = document.getElementById('subject').value;
+      const topicSelect = document.getElementById('topic');
+      topicSelect.innerHTML = '<option value="">Select Topic</option>';
 
-        fetch('/generate_question', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentIds, subject, topic, level, numQuestions, timeLimit })
-        })
-        .then(response => response.json())
+      if (subject) {
+        topicSelect.disabled = false;
+        subjectsTopics[subject].forEach(topic => {
+          const option = document.createElement('option');
+          option.value = topic;
+          option.textContent = topic;
+          topicSelect.appendChild(option);
+        });
+      } else {
+        topicSelect.disabled = true;
+      }
+    }
+
+    document.getElementById('subject').addEventListener('change', populateTopics);
+
+    function fetchFilteredQuestions() {
+      const subject = document.getElementById('subject').value;
+      const topic = document.getElementById('topic').value;
+      const level = document.getElementById('level').value;
+
+      fetch(`/get_filtered_questions?subject=${subject}&topic=${topic}&level=${level}`)
+        .then(res => res.json())
         .then(data => {
-            if (data.error) {
-                document.getElementById('result').innerHTML = `<p class="result incorrect">${data.error}</p>`;
-            } else {
-                document.getElementById('result').innerHTML = `<p class="result correct">Assigned questions successfully!</p>`;
-            }
-        })
-        .catch(error => {
-            console.error("Error assigning questions:", error);
-            document.getElementById('result').innerHTML = `<p class="result incorrect">Error assigning questions. Please try again.</p>`;
+          const questionsList = document.getElementById('questionsList');
+          questionsList.innerHTML = '';
+          if (data.questions.length === 0) {
+            questionsList.innerHTML = '<div class="alert alert-warning">No questions in the database</div>';
+          } else {
+            data.questions.forEach(q => {
+              const qBlock = `
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" name="questionIds" value="${q.id}" id="q${q.id}">
+                  <label class="form-check-label" for="q${q.id}">
+                    <strong>Q:</strong> ${q.question}<br>
+                    <strong>Options:</strong> A) ${q.options.A}, B) ${q.options.B}, C) ${q.options.C}, D) ${q.options.D}
+                  </label>
+                </div>`;
+              questionsList.insertAdjacentHTML('beforeend', qBlock);
+            });
+          }
+          updateAssignButtonState();
         });
+    }
+
+    document.getElementById('questionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const studentIds = Array.from(document.querySelectorAll('input[name="studentIds"]:checked')).map(cb => cb.value);
+      if (studentIds.length === 0) {
+        document.getElementById('studentError').style.display = 'block';
+        return;
+      } else {
+        document.getElementById('studentError').style.display = 'none';
+      }
+
+      const questionIds = Array.from(document.querySelectorAll('input[name="questionIds"]:checked')).map(cb => cb.value);
+      const subject = document.getElementById('subject').value;
+      const topic = document.getElementById('topic').value;
+      const level = document.getElementById('level').value;
+      const numQuestions = document.getElementById('numQuestions').value;
+      const timeLimit = document.getElementById('timeLimit').value;
+
+      const response = await fetch('/generate_question', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ studentIds, questionIds, subject, topic, level, numQuestions, timeLimit })
+      });
+
+      const result = await response.json();
+      document.getElementById('responseBox').innerHTML = `<div class="alert alert-success">✅ ${result.message || 'Test Assigned Successfully!'}</div>`;
+      setTimeout(() => window.location.reload(), 1500);
     });
-</script>
 
+    function updateAssignButtonState() {
+      const requiredCount = parseInt(document.getElementById('numQuestions').value);
+      const selectedCount = document.querySelectorAll('input[name="questionIds"]:checked').length;
+      const assignBtn = document.getElementById('assignBtn');
+      assignBtn.disabled = (selectedCount !== requiredCount);
+    }
 
+    document.addEventListener('change', function(e) {
+      if (e.target.name === 'questionIds') updateAssignButtonState();
+    });
+
+    document.getElementById('numQuestions').addEventListener('input', function() {
+      document.querySelectorAll('input[name="questionIds"]').forEach(cb => cb.checked = false);
+      updateAssignButtonState();
+    });
+  </script>
 </body>
 </html>
